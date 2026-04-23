@@ -4,6 +4,7 @@ pipeline {
     environment {
         IMAGE_NAME = 'mi-web-uoc'
         IMAGE_TAG = 'latest'
+        KUBECONFIG = '/var/lib/jenkins/.kube/config'
     }
 
     stages {
@@ -17,12 +18,15 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh 'docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .'
+                sh 'docker save ${IMAGE_NAME}:${IMAGE_TAG} -o ${IMAGE_NAME}.tar'
+                sh 'sudo ctr -n k8s.io images import ${IMAGE_NAME}.tar'
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
                 sh 'kubectl apply -f k8s/deployment.yaml'
+                sh 'kubectl apply -f k8s/service.yaml'
                 sh 'kubectl rollout restart deployment/mi-web-deployment'
             }
         }
